@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/V001__create_users_table.sql
+  - include:
+      file: db/changelog/changes/V002__create_brands_table.sql
+  - include:
+      file: db/changelog/changes/V003__create_review_sources_table.sql
+  - include:
+      file: db/changelog/changes/V004__create_reviews_table.sql
+  - include:
+      file: db/changelog/changes/V005__create_sentiment_changes_table.sql
+  - include:
+      file: db/changelog/changes/V006__create_dashboard_aggregates_table.sql
+  - include:
+      file: db/changelog/changes/V007__create_ai_summaries_table.sql
+  - include:
+      file: db/changelog/changes/V008__create_email_reports_table.sql
+  - include:
+      file: db/changelog/changes/V009__create_user_activity_log_table.sql
+  - include:
+      file: db/changelog/changes/V010__create_sync_jobs_table.sql
+  - include:
+      file: db/changelog/changes/V011__create_indexes.sql
+  - include:
+      file: db/changelog/changes/V012__create_triggers.sql

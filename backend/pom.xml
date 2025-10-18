@@ -189,6 +189,13 @@
             <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
 
+        <!-- Hibernate Types for JSONB support -->
+        <dependency>
+            <groupId>io.hypersistence</groupId>
+            <artifactId>hypersistence-utils-hibernate-63</artifactId>
+            <version>3.7.0</version>
+        </dependency>
+
         <!-- Testy -->
         <dependency>
             <groupId>org.testcontainers</groupId>

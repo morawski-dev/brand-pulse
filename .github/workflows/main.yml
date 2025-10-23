@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build and Test
+  backend:
+    name: Backend Build and Test
     runs-on: ubuntu-latest
 
     steps:
@@ -41,3 +41,28 @@ jobs:
             backend/target/surefire-reports/
             backend/target/failsafe-reports/
           if-no-files-found: ignore
+
+  frontend:
+    name: Frontend Lint and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: frontend
+
+      - name: Lint
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: frontend

@@ -67,3 +67,57 @@ jobs:
         run: npm run build
         working-directory: frontend
 
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    needs:
+      - backend
+      - frontend
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      COPILOT_APPLICATION: ${{ secrets.COPILOT_APPLICATION }}
+      COPILOT_ENVIRONMENT: ${{ secrets.COPILOT_ENVIRONMENT }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install AWS Copilot CLI
+        run: |
+          curl -Lo copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux
+          chmod +x copilot
+          sudo mv copilot /usr/local/bin/copilot
+
+      - name: Copilot version
+        run: copilot --version
+
+      - name: Deploy backend service
+        run: copilot svc deploy --name backend --env "$COPILOT_ENVIRONMENT" --app "$COPILOT_APPLICATION" --tag "$IMAGE_TAG"
+
+      - name: Deploy frontend service
+        if: ${{ hashFiles('frontend/package.json') != '' }}
+        run: copilot svc deploy --name frontend --env "$COPILOT_ENVIRONMENT" --app "$COPILOT_APPLICATION" --tag "$IMAGE_TAG"
+
+      - name: Smoke test frontend
+        if: ${{ secrets.FRONTEND_URL != '' }}
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: |
+          echo "Probing $FRONTEND_URL"
+          curl --fail --retry 5 --max-time 10 "$FRONTEND_URL"
+
+      - name: Smoke test backend
+        if: ${{ secrets.BACKEND_HEALTH_URL != '' }}
+        env:
+          BACKEND_HEALTH_URL: ${{ secrets.BACKEND_HEALTH_URL }}
+        run: |
+          echo "Probing $BACKEND_HEALTH_URL"
+          curl --fail --retry 5 --max-time 10 "$BACKEND_HEALTH_URL"

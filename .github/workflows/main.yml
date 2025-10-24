@@ -107,17 +107,17 @@ jobs:
         run: copilot svc deploy --name frontend --env "$COPILOT_ENVIRONMENT" --app "$COPILOT_APPLICATION" --tag "$IMAGE_TAG"
 
       - name: Smoke test frontend
-        if: ${{ secrets.FRONTEND_URL != '' }}
         env:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        if: ${{ env.FRONTEND_URL != '' }}
         run: |
           echo "Probing $FRONTEND_URL"
           curl --fail --retry 5 --max-time 10 "$FRONTEND_URL"
 
       - name: Smoke test backend
-        if: ${{ secrets.BACKEND_HEALTH_URL != '' }}
         env:
           BACKEND_HEALTH_URL: ${{ secrets.BACKEND_HEALTH_URL }}
+        if: ${{ env.BACKEND_HEALTH_URL != '' }}
         run: |
           echo "Probing $BACKEND_HEALTH_URL"
           curl --fail --retry 5 --max-time 10 "$BACKEND_HEALTH_URL"

@@ -1,3 +1,4 @@
+import { Navigation } from '@/components/layout/navigation';
 import { HeroSection } from '@/components/landing/hero-section';
 import { FeaturesSection } from '@/components/landing/features-section';
 import { BenefitsSection } from '@/components/landing/benefits-section';
@@ -19,9 +20,13 @@ import {
  */
 export default function LandingPage() {
   return (
-    <main className="flex min-h-screen flex-col">
-      {/* Hero Section with animated metrics */}
-      <HeroSection metrics={HERO_METRICS} />
+    <>
+      {/* Navigation Bar */}
+      <Navigation variant="default" />
+
+      <main className="flex min-h-screen flex-col">
+        {/* Hero Section with animated metrics */}
+        <HeroSection metrics={HERO_METRICS} />
 
       {/* Key Features Section */}
       <FeaturesSection features={FEATURES} />
@@ -38,8 +43,9 @@ export default function LandingPage() {
       {/* Final Call-to-Action Section */}
       <CTASection />
 
-      {/* Sticky Mobile CTA (visible only on mobile after scroll) */}
-      <StickyMobileCTA threshold={300} />
-    </main>
+        {/* Sticky Mobile CTA (visible only on mobile after scroll) */}
+        <StickyMobileCTA threshold={300} />
+      </main>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Navigation } from "@/components/layout/navigation";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://brandpulse.io'),
@@ -109,8 +109,9 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <Navigation variant="default" />
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

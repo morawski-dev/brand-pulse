@@ -67,7 +67,7 @@ export function Navigation({ variant = 'default' }: NavigationProps) {
             aria-label="BrandPulse Home"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">B</span>
+              <span className="text-lg font-bold text-primary-foreground">BP</span>
             </div>
             <span className="text-xl font-bold text-foreground">BrandPulse</span>
           </button>

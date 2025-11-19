@@ -1,5 +1,5 @@
 /**
- * Onboarding Page - First-time user setup (PLACEHOLDER)
+ * Onboarding Page - First-time user setup
  *
  * Route: /onboarding
  * Protected: Requires authentication
@@ -7,55 +7,43 @@
  * Flow:
  * 1. User completes registration
  * 2. Redirected here automatically
- * 3. Configure first review source (Google/Facebook/Trustpilot)
- * 4. Redirect to /dashboard
+ * 3. Configure first brand and review source (5-step wizard)
+ * 4. Auto-redirect to /dashboard after import completes
  *
- * TODO: Implement onboarding flow (US-003)
+ * User Story: US-003 - Configuring the first source
+ * Success Criteria: 90% of users configure within 10 minutes
  */
 
 import { Metadata } from 'next';
-import Link from 'next/link';
+import { OnboardingWizard } from './components/OnboardingWizard';
+
+// ========================================
+// METADATA
+// ========================================
 
 export const metadata: Metadata = {
   title: 'Konfiguracja konta - BrandPulse',
-  description: 'Skonfiguruj pierwsze źródło opinii',
+  description: 'Skonfiguruj swoją markę i pierwsze źródło opinii',
+  robots: 'noindex, nofollow', // Don't index onboarding pages
 };
 
-export default function OnboardingPage() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="container mx-auto px-4 py-8">
-        <header className="mb-8">
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
-              <span className="text-xl font-bold text-white">BP</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">BrandPulse</span>
-          </div>
-        </header>
+// ========================================
+// PAGE COMPONENT
+// ========================================
 
-        <main className="mx-auto max-w-2xl">
-          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-xl">
-            <div className="space-y-6 text-center">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-                Witaj w BrandPulse! 🎉
-              </h1>
-              <p className="text-gray-600">
-                Twoje konto zostało utworzone pomyślnie.
-              </p>
-              <p className="text-gray-600">
-                Strona konfiguracji pierwszego źródła opinii w trakcie implementacji.
-              </p>
-              <Link
-                href="/"
-                className="inline-block text-blue-600 hover:underline"
-              >
-                ← Wróć do strony głównej
-              </Link>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+/**
+ * Onboarding page component
+ *
+ * Renders the 5-step wizard:
+ * 1. Brand name setup
+ * 2. Source type selection (Google/Facebook/Trustpilot)
+ * 3. Source URL input with validation
+ * 4. Confirmation and review
+ * 5. Import progress with auto-redirect
+ *
+ * Note: This is a client component through OnboardingWizard
+ * Authentication check happens in middleware or AuthContext
+ */
+export default function OnboardingPage() {
+  return <OnboardingWizard />;
 }

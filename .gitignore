@@ -1,0 +1,75 @@
+# ===========================
+# OS / editor artifacts
+# ===========================
+.DS_Store
+Thumbs.db
+nul
+**/nul
+
+# JetBrains IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# VS Code
+.vscode/
+
+# ===========================
+# Claude Code (local only)
+# ===========================
+.claude/settings.local.json
+.claude/
+.ai/
+
+# ===========================
+# Maven
+# ===========================
+target/
+**/target/
+.mvn/wrapper/maven-wrapper.jar
+# local maven-wrapper download cache
+.m2/
+**/.m2/
+HELP.md
+
+# ===========================
+# Node / Next.js (frontend)
+# ===========================
+node_modules/
+.pnp
+.pnp.*
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# ===========================
+# Logs
+# ===========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ===========================
+# Environment / secrets
+# ===========================
+.env
+.env.*
+*.pem
+
+# ===========================
+# Vercel
+# ===========================
+.vercel
+
+# ===========================
+# One-off helper scripts
+# ===========================
+fix-controller-tests.sh
+fix-tests.ps1
+fix_controller_tests.py

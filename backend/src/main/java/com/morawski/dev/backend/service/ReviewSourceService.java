@@ -1,12 +1,16 @@
 package com.morawski.dev.backend.service;
 
+import com.morawski.dev.backend.dto.common.JobStatus;
+import com.morawski.dev.backend.dto.common.JobType;
 import com.morawski.dev.backend.dto.source.*;
 import com.morawski.dev.backend.entity.Brand;
 import com.morawski.dev.backend.entity.ReviewSource;
+import com.morawski.dev.backend.entity.SyncJob;
 import com.morawski.dev.backend.entity.User;
 import com.morawski.dev.backend.exception.*;
 import com.morawski.dev.backend.mapper.ReviewSourceMapper;
 import com.morawski.dev.backend.repository.ReviewSourceRepository;
+import com.morawski.dev.backend.repository.SyncJobRepository;
 import com.morawski.dev.backend.util.Constants;
 import com.morawski.dev.backend.util.DateTimeUtils;
 import com.morawski.dev.backend.util.StringUtils;
@@ -25,17 +29,13 @@ import java.util.stream.Collectors;
  * Service class for review source management operations.
  * Handles CRUD operations for review sources with plan limit enforcement.
  *
- * API Endpoints (Section 6):
- * - POST /api/brands/{brandId}/review-sources (Section 6.1)
- * - GET /api/brands/{brandId}/review-sources (Section 6.2)
- * - GET /api/brands/{brandId}/review-sources/{sourceId} (Section 6.3)
- * - PATCH /api/brands/{brandId}/review-sources/{sourceId} (Section 6.4)
- * - DELETE /api/brands/{brandId}/review-sources/{sourceId} (Section 6.5)
+ * API Endpoints:
+ * - POST /api/brands/{brandId}/review-sources
+ * - GET /api/brands/{brandId}/review-sources
+ * - GET /api/brands/{brandId}/review-sources/{sourceId}
+ * - PATCH /api/brands/{brandId}/review-sources/{sourceId}
+ * - DELETE /api/brands/{brandId}/review-sources/{sourceId}
  *
- * User Stories:
- * - US-003: Configuring First Source (Step 2: Add Review Source)
- * - US-006: Switching Between Locations
- * - US-009: Free Plan Limitation (1 source maximum)
  */
 @Service
 @RequiredArgsConstructor
@@ -43,15 +43,16 @@ import java.util.stream.Collectors;
 public class ReviewSourceService {
 
     private final ReviewSourceRepository reviewSourceRepository;
+    private final SyncJobRepository syncJobRepository;
     private final BrandService brandService;
     private final UserService userService;
     private final ReviewSourceMapper reviewSourceMapper;
 
     /**
      * Create new review source for brand.
-     * API: POST /api/brands/{brandId}/review-sources (Section 6.1)
+     * API: POST /api/brands/{brandId}/review-sources
      *
-     * Business Logic (from API Plan Section 6.1):
+     * Business Logic:
      * 1. Check user's plan: Count existing active sources for brand
      * 2. If count >= max_sources_allowed, return 403 with plan upgrade message
      * 3. Encrypt credentials using AES-256 before storing
@@ -124,8 +125,17 @@ public class ReviewSourceService {
 
         ReviewSource savedSource = reviewSourceRepository.save(reviewSource);
 
-        // TODO: Create sync_job with job_type='INITIAL', status='PENDING'
-        // TODO: Trigger background job to import last 90 days of reviews
+        // Create the INITIAL import job (status PENDING). The SyncJobProcessor poller
+        // (runs every 10s) picks up PENDING jobs and imports the last 90 days of reviews.
+        // Created via the repository directly to avoid a circular dependency with SyncJobService.
+        SyncJob importJob = syncJobRepository.save(
+            SyncJob.builder()
+                .jobType(JobType.INITIAL)
+                .status(JobStatus.PENDING)
+                .reviewSource(savedSource)
+                .build()
+        );
+        log.info("Initial import job created: jobId={}, sourceId={}", importJob.getId(), savedSource.getId());
         // TODO: Log activity: SOURCE_ADDED
 
         // Check if this is the first source
@@ -135,11 +145,10 @@ public class ReviewSourceService {
             // TODO: Log activity: FIRST_SOURCE_CONFIGURED_SUCCESSFULLY
         }
 
-        // Build response
+        // Build response with import job tracking info for the onboarding poller
         ReviewSourceResponse response = reviewSourceMapper.toReviewSourceResponse(savedSource);
-        // TODO: Set importJobId from created sync job
-        response.setImportJobId(null); // Placeholder until sync job is implemented
-        // response.setImportStatus(JobStatus.PENDING);
+        response.setImportJobId(importJob.getId());
+        response.setImportStatus(importJob.getStatus());
 
         log.info("Review source created: type={}, brandId={}, sourceId={}",
             savedSource.getSourceType(), brandId, savedSource.getId());
@@ -149,7 +158,7 @@ public class ReviewSourceService {
 
     /**
      * Get all review sources for a brand.
-     * API: GET /api/brands/{brandId}/review-sources (Section 6.2)
+     * API: GET /api/brands/{brandId}/review-sources
      *
      * Business Logic:
      * - Filter by brandId and deleted_at IS NULL
@@ -183,7 +192,7 @@ public class ReviewSourceService {
 
     /**
      * Get review source by ID with ownership validation.
-     * API: GET /api/brands/{brandId}/review-sources/{sourceId} (Section 6.3)
+     * API: GET /api/brands/{brandId}/review-sources/{sourceId}
      *
      * @param brandId Brand ID
      * @param sourceId Review source ID
@@ -210,7 +219,7 @@ public class ReviewSourceService {
 
     /**
      * Update review source.
-     * API: PATCH /api/brands/{brandId}/review-sources/{sourceId} (Section 6.4)
+     * API: PATCH /api/brands/{brandId}/review-sources/{sourceId}
      *
      * Business Logic:
      * - Setting isActive=false pauses automatic syncs
@@ -267,7 +276,7 @@ public class ReviewSourceService {
 
     /**
      * Soft delete review source.
-     * API: DELETE /api/brands/{brandId}/review-sources/{sourceId} (Section 6.5)
+     * API: DELETE /api/brands/{brandId}/review-sources/{sourceId}
      *
      * Business Logic:
      * - Soft delete: Set deleted_at=NOW()

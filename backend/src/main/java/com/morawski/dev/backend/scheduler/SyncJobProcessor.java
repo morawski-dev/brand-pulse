@@ -2,9 +2,12 @@ package com.morawski.dev.backend.scheduler;
 
 import com.morawski.dev.backend.dto.common.JobType;
 import com.morawski.dev.backend.dto.common.SourceType;
+import com.morawski.dev.backend.dto.common.SyncStatus;
 import com.morawski.dev.backend.dto.sync.SyncResult;
 import com.morawski.dev.backend.entity.ReviewSource;
 import com.morawski.dev.backend.entity.SyncJob;
+import com.morawski.dev.backend.service.AISummaryService;
+import com.morawski.dev.backend.service.ReviewSourceService;
 import com.morawski.dev.backend.service.SyncJobService;
 import com.morawski.dev.backend.service.sync.GoogleReviewSyncHandler;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +50,8 @@ import java.util.List;
 public class SyncJobProcessor {
 
     private final SyncJobService syncJobService;
+    private final ReviewSourceService reviewSourceService;
+    private final AISummaryService aiSummaryService;
     private final GoogleReviewSyncHandler googleReviewSyncHandler;
     // TODO: Add FacebookReviewSyncHandler (Phase 2)
     // private final FacebookReviewSyncHandler facebookReviewSyncHandler;
@@ -119,9 +124,14 @@ public class SyncJobProcessor {
         log.info("Starting async processing for sync job ID: {}", jobId);
 
         try {
-            // Fetch job details
+            // Fetch job details. job.getReviewSource() is a LAZY proxy; calling getId()
+            // on it does NOT hit the DB, but accessing any other field outside a session
+            // throws LazyInitializationException. Re-load the source so its scalar fields
+            // (sourceType, externalProfileId, credentials, ...) are fully initialized before
+            // we use it across transaction boundaries in the handler.
             SyncJob job = syncJobService.findByIdOrThrow(jobId);
-            ReviewSource reviewSource = job.getReviewSource();
+            Long reviewSourceId = job.getReviewSource().getId();
+            ReviewSource reviewSource = reviewSourceService.findByIdOrThrow(reviewSourceId);
 
             // Mark job as started
             syncJobService.markJobAsStarted(jobId);
@@ -150,12 +160,28 @@ public class SyncJobProcessor {
                 // Mark job as completed
                 syncJobService.markJobAsCompleted(jobId);
 
+                // Update the source's last-sync info (sets lastSyncAt, status, reschedules next sync)
+                reviewSourceService.updateSyncStatus(reviewSourceId, SyncStatus.SUCCESS, null);
+
                 log.info("Sync job {} completed successfully: fetched={}, new={}, updated={}",
                     jobId, result.getReviewsFetched(), result.getReviewsNew(), result.getReviewsUpdated());
+
+                // (Re)generate the AI summary for this source now that reviews changed.
+                // Wrapped so a summary failure never fails the sync job itself.
+                try {
+                    aiSummaryService.regenerateSummary(reviewSourceId);
+                    log.info("AI summary regenerated for source {} after sync job {}", reviewSourceId, jobId);
+                } catch (Exception summaryEx) {
+                    log.warn("Failed to regenerate AI summary for source {} after sync: {}",
+                        reviewSourceId, summaryEx.getMessage());
+                }
 
             } else {
                 // Mark job as failed
                 syncJobService.markJobAsFailed(jobId, result.getErrorMessage());
+
+                // Record the failure on the source too (lastSyncAt + FAILED status + error)
+                reviewSourceService.updateSyncStatus(reviewSourceId, SyncStatus.FAILED, result.getErrorMessage());
 
                 log.error("Sync job {} failed: {}", jobId, result.getErrorMessage());
             }

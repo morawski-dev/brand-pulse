@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -412,6 +413,85 @@ public class SyncJobService {
         syncJobRepository.save(job);
 
         log.error("Sync job failed: jobId={}, error={}", jobId, errorMessage);
+    }
+
+    /**
+     * Get initial-import progress for a review source (onboarding polling).
+     * API: GET /api/sources/{sourceId}/import-status
+     *
+     * Verifies the user owns the brand that owns the source, then derives a
+     * 0-100 progress value from the INITIAL sync job status.
+     *
+     * @param sourceId Review source ID
+     * @param userId User ID from JWT token
+     * @return ImportProgressResponse for the frontend onboarding poller
+     * @throws ResourceNotFoundException if source not found
+     * @throws ResourceAccessDeniedException if user doesn't own the brand
+     */
+    @Transactional(readOnly = true)
+    public ImportProgressResponse getImportStatusForSource(Long sourceId, Long userId) {
+        log.debug("Getting import status for source ID: {}", sourceId);
+
+        ReviewSource source = reviewSourceService.findByIdOrThrow(sourceId);
+        Long brandId = source.getBrand().getId();
+        brandService.findByIdAndUserIdOrThrow(brandId, userId);
+
+        SyncJob job = syncJobRepository.findInitialImportJob(sourceId).orElse(null);
+        return buildImportProgress(sourceId, job);
+    }
+
+    /**
+     * Build an ImportProgressResponse from an INITIAL sync job.
+     * Progress is derived from job status because the mock importer does not
+     * report intermediate progress: PENDING->0, IN_PROGRESS->50, COMPLETED->100, FAILED->0.
+     */
+    private ImportProgressResponse buildImportProgress(Long sourceId, SyncJob job) {
+        if (job == null) {
+            return ImportProgressResponse.builder()
+                .sourceId(sourceId)
+                .jobId(null)
+                .status(JobStatus.PENDING)
+                .progress(0)
+                .statusMessage("Przygotowywanie importu...")
+                .reviewsImported(0)
+                .totalReviews(0)
+                .build();
+        }
+
+        int progress;
+        String message;
+        switch (job.getStatus()) {
+            case COMPLETED -> {
+                progress = 100;
+                message = String.format("Import zakończony. Zaimportowano %d opinii.",
+                    job.getReviewsNew() != null ? job.getReviewsNew() : 0);
+            }
+            case IN_PROGRESS -> {
+                progress = 50;
+                message = "Importowanie opinii...";
+            }
+            case FAILED -> {
+                progress = 0;
+                message = "Import nie powiódł się.";
+            }
+            default -> {
+                progress = 0;
+                message = "Oczekiwanie na rozpoczęcie importu...";
+            }
+        }
+
+        return ImportProgressResponse.builder()
+            .sourceId(sourceId)
+            .jobId(job.getId())
+            .status(job.getStatus())
+            .progress(progress)
+            .statusMessage(message)
+            .reviewsImported(job.getReviewsNew() != null ? job.getReviewsNew() : 0)
+            .totalReviews(job.getReviewsFetched() != null ? job.getReviewsFetched() : 0)
+            .startedAt(job.getStartedAt() != null ? job.getStartedAt().atZone(ZoneId.of("UTC")) : null)
+            .completedAt(job.getCompletedAt() != null ? job.getCompletedAt().atZone(ZoneId.of("UTC")) : null)
+            .error(job.getErrorMessage())
+            .build();
     }
 
     // ========== Helper Methods ==========

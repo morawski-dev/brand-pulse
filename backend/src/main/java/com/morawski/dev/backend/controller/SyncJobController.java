@@ -1,5 +1,6 @@
 package com.morawski.dev.backend.controller;
 
+import com.morawski.dev.backend.dto.sync.ImportProgressResponse;
 import com.morawski.dev.backend.dto.sync.SyncJobListResponse;
 import com.morawski.dev.backend.dto.sync.SyncJobStatusResponse;
 import com.morawski.dev.backend.dto.sync.TriggerSyncRequest;
@@ -102,6 +103,30 @@ public class SyncJobController {
         log.info("GET /api/sync-jobs/{} - Get sync job status request received", jobId);
         Long userId = SecurityUtils.getCurrentUserId();
         SyncJobStatusResponse response = syncJobService.getSyncJobStatus(jobId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get initial-import progress for a review source (onboarding polling).
+     * API: GET /api/sources/{sourceId}/import-status
+     * User Story: US-003 - Configuring First Source
+     *
+     * The frontend onboarding wizard polls this every 2 seconds and stops when
+     * progress reaches 100. Progress is derived from the INITIAL sync job status.
+     *
+     * Success Response: 200 OK with import progress
+     * Error Responses:
+     * - 403 Forbidden: User doesn't own the brand containing this source
+     * - 404 Not Found: Source doesn't exist
+     *
+     * @param sourceId Review source ID
+     * @return ImportProgressResponse with progress percentage and status
+     */
+    @GetMapping("/api/sources/{sourceId}/import-status")
+    public ResponseEntity<ImportProgressResponse> getImportStatus(@PathVariable Long sourceId) {
+        log.info("GET /api/sources/{}/import-status - Get import status request received", sourceId);
+        Long userId = SecurityUtils.getCurrentUserId();
+        ImportProgressResponse response = syncJobService.getImportStatusForSource(sourceId, userId);
         return ResponseEntity.ok(response);
     }
 

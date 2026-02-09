@@ -5,6 +5,7 @@ import com.morawski.dev.backend.dto.sync.SyncResult;
 import com.morawski.dev.backend.entity.Review;
 import com.morawski.dev.backend.entity.ReviewSource;
 import com.morawski.dev.backend.repository.ReviewRepository;
+import com.morawski.dev.backend.util.OpenRouterClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -47,10 +48,9 @@ import java.util.Optional;
 public class GoogleReviewSyncHandler {
 
     private final ReviewRepository reviewRepository;
-    // TODO: Add GoogleApiClient when implemented
+    private final OpenRouterClient openRouterClient;
+    // TODO: Add GoogleApiClient when implemented (Faza 2)
     // private final GoogleApiClient googleApiClient;
-    // TODO: Add OpenRouterClient for sentiment analysis
-    // private final OpenRouterClient openRouterClient;
 
     /**
      * Sync reviews from Google for a specific review source.
@@ -263,11 +263,20 @@ public class GoogleReviewSyncHandler {
      * @return Sentiment classification
      */
     private Sentiment classifySentiment(short rating, String content) {
-        // TODO: Implement AI-based sentiment analysis
-        // Example:
-        // return openRouterClient.analyzeSentiment(content);
+        // Prefer AI-based classification; fall back to the rating heuristic when the
+        // AI service is unconfigured or unavailable (OpenRouterClient returns empty).
+        return openRouterClient.analyzeSentiment(content)
+            .map(OpenRouterClient.SentimentAnalysis::sentiment)
+            .orElseGet(() -> heuristicSentiment(rating));
+    }
 
-        // Simple heuristic for now
+    /**
+     * Rating-based sentiment heuristic used as a fallback when AI is unavailable.
+     * - Rating 4-5: POSITIVE
+     * - Rating 3: NEUTRAL
+     * - Rating 1-2: NEGATIVE
+     */
+    private Sentiment heuristicSentiment(short rating) {
         if (rating >= 4) {
             return Sentiment.POSITIVE;
         } else if (rating == 3) {

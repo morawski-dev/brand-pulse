@@ -68,7 +68,7 @@ public class AISummaryService {
      * @return AISummaryResponse containing the summary
      * @throws ResourceNotFoundException if review source doesn't exist
      */
-    @Cacheable(value = "summary", key = "'source:' + #reviewSourceId")
+    @Cacheable(value = "summaries", key = "'source:' + #reviewSourceId")
     @Transactional(readOnly = true)
     public AISummaryResponse getSummaryForSource(Long reviewSourceId) {
         log.info("Getting AI summary for review source: {}", reviewSourceId);
@@ -184,7 +184,7 @@ public class AISummaryService {
      *
      * @param reviewSourceId The review source ID
      */
-    @CacheEvict(value = "summary", key = "'source:' + #reviewSourceId")
+    @CacheEvict(value = "summaries", key = "'source:' + #reviewSourceId")
     @Transactional
     public void invalidateSummary(Long reviewSourceId) {
         log.info("Invalidating AI summary for review source: {}", reviewSourceId);
@@ -212,7 +212,7 @@ public class AISummaryService {
      * @param reviewSourceId The review source ID
      * @return AISummaryResponse containing the freshly generated summary
      */
-    @CacheEvict(value = "summary", key = "'source:' + #reviewSourceId")
+    @CacheEvict(value = "summaries", key = "'source:' + #reviewSourceId")
     @Transactional
     public AISummaryResponse regenerateSummary(Long reviewSourceId) {
         log.info("Regenerating AI summary for review source: {}", reviewSourceId);

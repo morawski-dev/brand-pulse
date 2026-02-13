@@ -17,11 +17,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +56,7 @@ public class DashboardService {
     private final ReviewSourceService reviewSourceService;
     private final ReviewService reviewService;
     private final SyncJobService syncJobService;
+    private final AISummaryService aiSummaryService;
     private final ReviewRepository reviewRepository;
     private final ReviewSourceRepository reviewSourceRepository;
 
@@ -135,6 +140,106 @@ public class DashboardService {
             .summaryText(summaryText)
             .recentNegativeReviews(recentNegativeReviews)
             .lastUpdated(Instant.now().atZone(ZoneId.of("UTC")))
+            .build();
+    }
+
+    /**
+     * Get dashboard summary in the frontend-facing shape (DashboardSummaryResponse).
+     * API: GET /api/dashboard/summary (Section 8.1)
+     *
+     * Unlike {@link #getDashboard}, this returns the nested contract the frontend
+     * expects: metrics.sentimentDistribution, an aiSummary object, period, etc.
+     *
+     * @param brandId Brand ID
+     * @param sourceId Optional review source ID (null = all sources / "All locations")
+     * @param userId User ID from JWT token
+     * @return DashboardSummaryResponse
+     */
+    @Transactional(readOnly = true)
+    public DashboardSummaryResponse getDashboardSummary(Long brandId, Long sourceId, Long userId) {
+        log.debug("Getting dashboard summary for brand ID: {}, sourceId: {}", brandId, sourceId);
+
+        // Verify user owns the brand
+        brandService.findByIdAndUserIdOrThrow(brandId, userId);
+
+        List<ReviewSource> allSources = reviewSourceRepository.findByBrandId(brandId);
+
+        // Determine which sources to aggregate
+        List<ReviewSource> sourcesToAggregate;
+        String sourceName = null;
+        if (sourceId != null) {
+            ReviewSource source = reviewSourceService.findByIdAndBrandIdOrThrow(sourceId, brandId);
+            sourcesToAggregate = List.of(source);
+            sourceName = source.getSourceType().name();
+        } else {
+            sourcesToAggregate = allSources;
+        }
+
+        DashboardMetrics flat = calculateDashboardMetrics(sourcesToAggregate);
+        MetricsResponse metrics = toMetricsResponse(flat);
+
+        // AI summary: use the selected source, or the single source in a 1-source
+        // (freemium) "All locations" view. Best-effort: never fail the dashboard if
+        // summary lookup/generation has an issue.
+        AISummaryResponse aiSummary = null;
+        Long aiSourceId = sourceId != null ? sourceId
+            : (allSources.size() == 1 ? allSources.get(0).getId() : null);
+        if (aiSourceId != null) {
+            try {
+                aiSummary = aiSummaryService.getSummaryForSource(aiSourceId);
+            } catch (Exception e) {
+                log.warn("Could not load AI summary for source {}: {}", aiSourceId, e.getMessage());
+            }
+        }
+
+        // MVP: the review list (incl. negatives) is served by the dedicated reviews
+        // endpoint; keep this list empty here to avoid duplicating that contract.
+        List<ReviewSummaryResponse> recentNegativeReviews = new ArrayList<>();
+
+        LocalDate today = LocalDate.now();
+        PeriodResponse period = PeriodResponse.builder()
+            .startDate(today.minusDays(90))
+            .endDate(today)
+            .build();
+
+        return DashboardSummaryResponse.builder()
+            .brandId(brandId)
+            .sourceId(sourceId)
+            .sourceName(sourceName)
+            .period(period)
+            .metrics(metrics)
+            .aiSummary(aiSummary)
+            .recentNegativeReviews(recentNegativeReviews)
+            .lastUpdated(Instant.now().atZone(ZoneId.of("UTC")))
+            .build();
+    }
+
+    /**
+     * Map the flat internal {@link DashboardMetrics} to the nested
+     * {@link MetricsResponse} contract expected by the frontend.
+     */
+    private MetricsResponse toMetricsResponse(DashboardMetrics m) {
+        SentimentDistributionResponse sentiment = SentimentDistributionResponse.builder()
+            .positive(m.getPositiveCount().intValue())
+            .negative(m.getNegativeCount().intValue())
+            .neutral(m.getNeutralCount().intValue())
+            .positivePercentage(BigDecimal.valueOf(m.getPositivePercentage()))
+            .negativePercentage(BigDecimal.valueOf(m.getNegativePercentage()))
+            .neutralPercentage(BigDecimal.valueOf(m.getNeutralPercentage()))
+            .build();
+
+        Map<Integer, Integer> ratingDistribution = new LinkedHashMap<>();
+        ratingDistribution.put(1, m.getRating1Count().intValue());
+        ratingDistribution.put(2, m.getRating2Count().intValue());
+        ratingDistribution.put(3, m.getRating3Count().intValue());
+        ratingDistribution.put(4, m.getRating4Count().intValue());
+        ratingDistribution.put(5, m.getRating5Count().intValue());
+
+        return MetricsResponse.builder()
+            .totalReviews(m.getTotalReviews().intValue())
+            .averageRating(BigDecimal.valueOf(m.getAverageRating()))
+            .sentimentDistribution(sentiment)
+            .ratingDistribution(ratingDistribution)
             .build();
     }
 

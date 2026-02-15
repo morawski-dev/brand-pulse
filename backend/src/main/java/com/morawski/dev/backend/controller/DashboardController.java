@@ -1,7 +1,7 @@
 package com.morawski.dev.backend.controller;
 
 import com.morawski.dev.backend.dto.dashboard.AISummaryResponse;
-import com.morawski.dev.backend.dto.dashboard.DashboardResponse;
+import com.morawski.dev.backend.dto.dashboard.DashboardSummaryResponse;
 import com.morawski.dev.backend.entity.ReviewSource;
 import com.morawski.dev.backend.security.SecurityUtils;
 import com.morawski.dev.backend.service.AISummaryService;
@@ -68,14 +68,14 @@ public class DashboardController {
      * @return DashboardResponse with metrics and AI summary
      */
     @GetMapping("/summary")
-    public ResponseEntity<DashboardResponse> getDashboardSummary(
+    public ResponseEntity<DashboardSummaryResponse> getDashboardSummary(
         @RequestParam Long brandId,
         @RequestParam(required = false) Long sourceId
     ) {
         log.info("GET /api/dashboard/summary - Dashboard summary request received for brand {}", brandId);
 
         Long userId = SecurityUtils.getCurrentUserId();
-        DashboardResponse response = dashboardService.getDashboard(brandId, sourceId, userId);
+        DashboardSummaryResponse response = dashboardService.getDashboardSummary(brandId, sourceId, userId);
 
         return ResponseEntity.ok(response);
     }

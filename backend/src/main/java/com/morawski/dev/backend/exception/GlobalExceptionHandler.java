@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -256,6 +257,33 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
             .code("ENDPOINT_NOT_FOUND")
             .message(String.format("No endpoint found for %s %s", ex.getHttpMethod(), ex.getRequestURL()))
+            .timestamp(ZonedDateTime.now())
+            .path(request.getRequestURI())
+            .build();
+
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(errorResponse);
+    }
+
+    /**
+     * Handle 404 for missing static resources.
+     *
+     * Spring Boot 3 / Spring MVC 6.1+ throws NoResourceFoundException (not
+     * NoHandlerFoundException) when a static resource path doesn't resolve
+     * (e.g. /swagger-ui.html, an unknown asset). Without this handler it falls
+     * through to the catch-all below and is wrongly reported as 500.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+        NoResourceFoundException ex,
+        HttpServletRequest request
+    ) {
+        log.warn("No static resource for {}", request.getRequestURI());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+            .code("RESOURCE_NOT_FOUND")
+            .message(String.format("No resource found for %s", request.getRequestURI()))
             .timestamp(ZonedDateTime.now())
             .path(request.getRequestURI())
             .build();

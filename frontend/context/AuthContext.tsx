@@ -46,6 +46,13 @@ interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest, rememberMe: boolean) => Promise<void>;
 
   /**
+   * Persist an already-obtained auth session (e.g. after registration, which
+   * returns a token directly). Stores token + expiry + user under the SAME keys
+   * as login, so the rest of the app (API client, route guards) sees the session.
+   */
+  setSession: (response: AuthResponse, rememberMe?: boolean) => void;
+
+  /**
    * Logout user and clear stored data
    * Redirects to login page
    */
@@ -167,6 +174,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   /**
+   * Persist an already-obtained session (registration auto-login).
+   * Defaults to localStorage so the session survives the onboarding flow.
+   */
+  const setSession = useCallback((response: AuthResponse, rememberMe: boolean = true) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(AUTH_TOKEN_KEY, response.token);
+    storage.setItem(TOKEN_EXPIRY_KEY, response.expiresAt);
+    storage.setItem(USER_DATA_KEY, JSON.stringify(response));
+    setUser(response);
+    setIsAuthenticated(true);
+  }, []);
+
+  /**
    * Logout user and clear all stored data
    */
   const logout = useCallback(() => {
@@ -220,6 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     loginError,
     login,
+    setSession,
     logout,
     checkAuth,
   };

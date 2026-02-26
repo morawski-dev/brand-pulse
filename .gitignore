@@ -67,9 +67,6 @@ yarn-error.log*
 # ===========================
 .vercel
 
-# ===========================
-# One-off helper scripts
-# ===========================
-fix-controller-tests.sh
-fix-tests.ps1
-fix_controller_tests.py
+docs/
+prompts/
+copilot/

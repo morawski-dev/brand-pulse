@@ -37,7 +37,7 @@ import {
   initialFormData,
 } from '@/lib/types/auth';
 import { UseRegisterFormReturn } from '@/lib/types/api';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { useAuthContext } from '@/context/AuthContext';
 import { registerUser, ApiException } from '@/lib/api/auth';
 import {
   validateEmail,
@@ -52,7 +52,7 @@ import {
 
 export function useRegisterForm(): UseRegisterFormReturn {
   const router = useRouter();
-  const { login } = useAuth();
+  const { setSession } = useAuthContext();
 
   // ========================================
   // STATE
@@ -258,8 +258,9 @@ export function useRegisterForm(): UseRegisterFormReturn {
           confirmPassword: formData.confirmPassword,
         });
 
-        // Auto-login user with returned token
-        login(response.token, response.expiresAt);
+        // Auto-login user: persist the session via AuthContext (same storage
+        // keys the API client and route guards read), so onboarding sees it.
+        setSession(response);
 
         // Show success modal
         setShowSuccessModal(true);
@@ -274,7 +275,7 @@ export function useRegisterForm(): UseRegisterFormReturn {
         setIsSubmitting(false);
       }
     },
-    [formData, validateForm, login, router]
+    [formData, validateForm, setSession, router]
   );
 
   /**

@@ -113,7 +113,7 @@ export async function createReviewSource(
 
   try {
     const response = await fetchWithTimeout(
-      `${API_BASE_URL}/api/brands/${brandId}/sources`,
+      `${API_BASE_URL}/api/brands/${brandId}/review-sources`,
       {
         method: 'POST',
         headers: {
@@ -316,7 +316,7 @@ export async function getReviewSources(
 
   try {
     const response = await fetchWithTimeout(
-      `${API_BASE_URL}/api/brands/${brandId}/sources`,
+      `${API_BASE_URL}/api/brands/${brandId}/review-sources`,
       {
         method: 'GET',
         headers: {
@@ -360,9 +360,10 @@ export async function getReviewSources(
       throw new BrandApiException(error);
     }
 
-    // Parse success response
-    const result: ReviewSourceResponse[] = await response.json();
-    return result;
+    // Parse success response. Backend wraps the list in { sources: [...] }
+    // (ReviewSourceListResponse), so unwrap it to a bare array here.
+    const result: { sources: ReviewSourceResponse[] } = await response.json();
+    return result.sources ?? [];
   } catch (error) {
     // Re-throw BrandApiException as-is
     if (error instanceof BrandApiException) {

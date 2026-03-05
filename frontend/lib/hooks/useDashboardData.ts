@@ -31,6 +31,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getUserBrand } from '@/lib/api/brand';
+import { getReviewSources } from '@/lib/api/reviewSource';
 import { fetchDashboardSummary, fetchReviews } from '@/lib/api/dashboard';
 import { ApiException } from '@/lib/api/client';
 import type { BrandResponse } from '@/lib/types/brand';
@@ -157,11 +158,23 @@ export function useDashboardData(
 
   const fetchSources = useCallback(async (fetchedBrandId: number) => {
     try {
-      // Note: We'll need to implement this endpoint in brand.ts
-      // For now, using empty array
-      // const sourcesData = await fetchReviewSources(fetchedBrandId);
-      // setSources(sourcesData.sources);
-      setSources([]);
+      const sourcesData = await getReviewSources(fetchedBrandId);
+      // Map ReviewSourceResponse[] -> ReviewSourceSummary[] (selector view model).
+      // SourceType is declared in two modules (onboarding/common) with identical
+      // members; TS treats them nominally, so cast through the summary's field type.
+      setSources(
+        sourcesData.map((s): ReviewSourceSummary => ({
+          sourceId: s.sourceId,
+          sourceType: s.sourceType as unknown as ReviewSourceSummary['sourceType'],
+          profileUrl: s.profileUrl,
+          isActive: s.isActive,
+          lastSyncAt: s.lastSyncAt,
+          lastSyncStatus:
+            String(s.lastSyncStatus) === 'SUCCESS' || String(s.lastSyncStatus) === 'FAILED'
+              ? (String(s.lastSyncStatus) as 'SUCCESS' | 'FAILED')
+              : null,
+        }))
+      );
     } catch (err) {
       // Don't fail the whole load if sources fail
       console.error('Failed to fetch sources:', err);

@@ -14,8 +14,7 @@
 
 'use client';
 
-import { Metadata } from 'next';
-import React, { useState, useCallback } from 'react';
+import React, { Suspense, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   DashboardLayout,
@@ -35,11 +34,16 @@ import { toastMessages, getSentimentLabel } from '@/lib/utils/toastMessages';
 import type { Sentiment } from '@/lib/types/common';
 import type { ReviewViewModel } from '@/lib/types/review';
 
+// Dashboard is auth-gated and renders dynamic, per-user data that depends on
+// URL search params (filters). Opt out of static prerendering to avoid the
+// useSearchParams() CSR-bailout error during `next build`.
+export const dynamic = 'force-dynamic';
+
 // ========================================
 // COMPONENT
 // ========================================
 
-export default function DashboardPage() {
+function DashboardContent() {
   // ========================================
   // STATE - Location Selection
   // ========================================
@@ -261,5 +265,21 @@ export default function DashboardPage() {
       {/* Keyboard Shortcuts Help */}
       <KeyboardShortcutsHelp />
     </>
+  );
+}
+
+// useReviewFilters() relies on useSearchParams(), which requires a Suspense
+// boundary for client components during build. Wrap the content accordingly.
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 }

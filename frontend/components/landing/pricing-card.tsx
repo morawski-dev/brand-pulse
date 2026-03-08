@@ -62,7 +62,7 @@ export function PricingCard({ plan, onCTAClick }: PricingCardProps) {
         {/* Features List */}
         <div>
           <p className="mb-3 text-sm font-medium text-muted-foreground">
-            What's included:
+            What&apos;s included:
           </p>
           <ul className="space-y-2">
             {plan.features.map((feature, index) => (

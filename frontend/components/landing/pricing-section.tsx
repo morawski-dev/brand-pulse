@@ -38,7 +38,7 @@ export function PricingSection({ plans }: PricingSectionProps) {
             Simple, Transparent Pricing
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Start free with one review source. Upgrade when you're ready to scale.
+            Start free with one review source. Upgrade when you&apos;re ready to scale.
           </p>
         </div>
 

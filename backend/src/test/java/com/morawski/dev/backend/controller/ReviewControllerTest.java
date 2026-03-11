@@ -106,10 +106,10 @@ class ReviewControllerTest extends ControllerTestBase {
                 .andExpect(jsonPath("$.reviews[0].sentiment").value("POSITIVE"))
                 .andExpect(jsonPath("$.reviews[1].reviewId").value(2))
                 .andExpect(jsonPath("$.reviews[1].sentiment").value("NEGATIVE"))
-                .andExpect(jsonPath("$.page").value(0))
-                .andExpect(jsonPath("$.size").value(20))
-                .andExpect(jsonPath("$.totalElements").value(2))
-                .andExpect(jsonPath("$.totalPages").value(1));
+                .andExpect(jsonPath("$.pagination.currentPage").value(0))
+                .andExpect(jsonPath("$.pagination.pageSize").value(20))
+                .andExpect(jsonPath("$.pagination.totalItems").value(2))
+                .andExpect(jsonPath("$.pagination.totalPages").value(1));
 
             verify(reviewService).getReviews(
                 eq(1L), isNull(), isNull(), isNull(), isNull(), isNull(),
@@ -160,7 +160,7 @@ class ReviewControllerTest extends ControllerTestBase {
             result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.reviews").isArray())
                 .andExpect(jsonPath("$.reviews[0].sentiment").value("NEGATIVE"))
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$.pagination.totalItems").value(1));
 
             verify(reviewService).getReviews(
                 eq(1L), isNull(), eq(List.of(Sentiment.NEGATIVE)), isNull(), isNull(), isNull(),
@@ -247,8 +247,8 @@ class ReviewControllerTest extends ControllerTestBase {
 
             // Then
             result.andExpect(status().isOk())
-                .andExpect(jsonPath("$.page").value(1))
-                .andExpect(jsonPath("$.size").value(10));
+                .andExpect(jsonPath("$.pagination.currentPage").value(1))
+                .andExpect(jsonPath("$.pagination.pageSize").value(10));
 
             verify(reviewService).getReviews(
                 eq(1L), isNull(), isNull(), isNull(), isNull(), isNull(),
@@ -319,7 +319,7 @@ class ReviewControllerTest extends ControllerTestBase {
         @DisplayName("Should return 404 NOT FOUND when review doesn't exist")
         void shouldReturnNotFound_WhenReviewDoesNotExist() throws Exception {
             // Given
-            when(reviewService.getReviewById(1L, 1L, 999L))
+            when(reviewService.getReviewById(1L, 999L, 1L))
                 .thenThrow(new ResourceNotFoundException("Review", "id", 999L));
 
             // When
@@ -329,7 +329,7 @@ class ReviewControllerTest extends ControllerTestBase {
             // Then
             result.andExpect(status().isNotFound());
 
-            verify(reviewService).getReviewById(1L, 1L, 999L);
+            verify(reviewService).getReviewById(1L, 999L, 1L);
         }
     }
 

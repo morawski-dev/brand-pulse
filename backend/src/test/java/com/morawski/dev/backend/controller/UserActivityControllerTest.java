@@ -84,6 +84,7 @@ class UserActivityControllerTest extends ControllerTestBase {
 
             // When
             ResultActions result = mockMvc.perform(get("/api/users/me/activity")
+                .with(authenticatedUser(1L, "test@example.com"))
                 .contentType(MediaType.APPLICATION_JSON));
 
             // Then
@@ -124,6 +125,7 @@ class UserActivityControllerTest extends ControllerTestBase {
 
             // When
             ResultActions result = mockMvc.perform(get("/api/users/me/activity")
+                .with(authenticatedUser(1L, "test@example.com"))
                 .param("page", "2")
                 .param("size", "10")
                 .contentType(MediaType.APPLICATION_JSON));
@@ -159,6 +161,7 @@ class UserActivityControllerTest extends ControllerTestBase {
 
             // When
             ResultActions result = mockMvc.perform(get("/api/users/me/activity")
+                .with(authenticatedUser(1L, "test@example.com"))
                 .contentType(MediaType.APPLICATION_JSON));
 
             // Then
@@ -218,6 +221,7 @@ class UserActivityControllerTest extends ControllerTestBase {
 
             // When
             ResultActions result = mockMvc.perform(get("/api/users/me/activity")
+                .with(authenticatedUser(1L, "test@example.com"))
                 .contentType(MediaType.APPLICATION_JSON));
 
             // Then

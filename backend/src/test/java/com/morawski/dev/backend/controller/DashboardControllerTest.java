@@ -2,8 +2,9 @@ package com.morawski.dev.backend.controller;
 
 import com.morawski.dev.backend.dto.common.Sentiment;
 import com.morawski.dev.backend.dto.dashboard.AISummaryResponse;
-import com.morawski.dev.backend.dto.dashboard.DashboardResponse;
-import com.morawski.dev.backend.dto.dashboard.DashboardMetrics;
+import com.morawski.dev.backend.dto.dashboard.DashboardSummaryResponse;
+import com.morawski.dev.backend.dto.dashboard.MetricsResponse;
+import com.morawski.dev.backend.dto.dashboard.SentimentDistributionResponse;
 import com.morawski.dev.backend.entity.ReviewSource;
 import com.morawski.dev.backend.entity.Brand;
 import com.morawski.dev.backend.exception.ResourceAccessDeniedException;
@@ -22,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
@@ -61,35 +63,41 @@ class DashboardControllerTest extends ControllerTestBase {
     @DisplayName("GET /api/dashboard/summary")
     class GetDashboardSummaryTests {
 
+        private DashboardSummaryResponse sampleSummary(Long brandId, Long sourceId) {
+            SentimentDistributionResponse sentiment = SentimentDistributionResponse.builder()
+                .positive(70).negative(20).neutral(10)
+                .positivePercentage(BigDecimal.valueOf(70.0))
+                .negativePercentage(BigDecimal.valueOf(20.0))
+                .neutralPercentage(BigDecimal.valueOf(10.0))
+                .build();
+
+            MetricsResponse metrics = MetricsResponse.builder()
+                .totalReviews(100)
+                .averageRating(BigDecimal.valueOf(4.5))
+                .sentimentDistribution(sentiment)
+                .ratingDistribution(Map.of(1, 10, 2, 10, 3, 10, 4, 20, 5, 50))
+                .build();
+
+            AISummaryResponse ai = AISummaryResponse.builder()
+                .summaryId(1L)
+                .sourceId(sourceId)
+                .text("Overall positive feedback with high ratings")
+                .build();
+
+            return DashboardSummaryResponse.builder()
+                .brandId(brandId)
+                .sourceId(sourceId)
+                .metrics(metrics)
+                .aiSummary(ai)
+                .recentNegativeReviews(List.of())
+                .build();
+        }
+
         @Test
         @DisplayName("Should get dashboard summary successfully and return 200 OK")
         void shouldGetDashboardSummary_Successfully() throws Exception {
             // Given
-            DashboardMetrics metrics = DashboardMetrics.builder()
-                .averageRating(4.5)
-                .totalReviews(100L)
-                .positiveCount(70L)
-                .negativeCount(20L)
-                .neutralCount(10L)
-                .positivePercentage(70.0)
-                .negativePercentage(20.0)
-                .neutralPercentage(10.0)
-                .rating5Count(50L)
-                .rating4Count(20L)
-                .rating3Count(10L)
-                .rating2Count(10L)
-                .rating1Count(10L)
-                .build();
-
-            DashboardResponse response = DashboardResponse.builder()
-                .brandId(1L)
-                .selectedSourceId(null)
-                .metrics(metrics)
-                .summaryText("Overall positive feedback with high ratings")
-                .recentNegativeReviews(List.of())
-                .build();
-
-            when(dashboardService.getDashboard(1L, null, 1L)).thenReturn(response);
+            when(dashboardService.getDashboardSummary(1L, null, 1L)).thenReturn(sampleSummary(1L, null));
 
             // When
             ResultActions result = mockMvc.perform(get("/api/dashboard/summary")
@@ -102,40 +110,17 @@ class DashboardControllerTest extends ControllerTestBase {
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.metrics.averageRating").value(4.5))
                 .andExpect(jsonPath("$.metrics.totalReviews").value(100))
-                .andExpect(jsonPath("$.summaryText").value("Overall positive feedback with high ratings"));
+                .andExpect(jsonPath("$.metrics.sentimentDistribution.positivePercentage").value(70.0))
+                .andExpect(jsonPath("$.aiSummary.text").value("Overall positive feedback with high ratings"));
 
-            verify(dashboardService).getDashboard(1L, null, 1L);
+            verify(dashboardService).getDashboardSummary(1L, null, 1L);
         }
 
         @Test
         @DisplayName("Should get dashboard summary filtered by source successfully")
         void shouldGetDashboardSummaryBySource_Successfully() throws Exception {
             // Given
-            DashboardMetrics metrics = DashboardMetrics.builder()
-                .averageRating(4.7)
-                .totalReviews(50L)
-                .positiveCount(40L)
-                .negativeCount(5L)
-                .neutralCount(5L)
-                .positivePercentage(80.0)
-                .negativePercentage(10.0)
-                .neutralPercentage(10.0)
-                .rating5Count(30L)
-                .rating4Count(20L)
-                .rating3Count(0L)
-                .rating2Count(0L)
-                .rating1Count(0L)
-                .build();
-
-            DashboardResponse response = DashboardResponse.builder()
-                .brandId(1L)
-                .selectedSourceId(1L)
-                .metrics(metrics)
-                .summaryText("Excellent Google reviews")
-                .recentNegativeReviews(List.of())
-                .build();
-
-            when(dashboardService.getDashboard(1L, 1L, 1L)).thenReturn(response);
+            when(dashboardService.getDashboardSummary(1L, 1L, 1L)).thenReturn(sampleSummary(1L, 1L));
 
             // When
             ResultActions result = mockMvc.perform(get("/api/dashboard/summary")
@@ -147,17 +132,17 @@ class DashboardControllerTest extends ControllerTestBase {
             // Then
             result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.brandId").value(1))
-                .andExpect(jsonPath("$.selectedSourceId").value(1))
-                .andExpect(jsonPath("$.metrics.totalReviews").value(50));
+                .andExpect(jsonPath("$.sourceId").value(1))
+                .andExpect(jsonPath("$.metrics.totalReviews").value(100));
 
-            verify(dashboardService).getDashboard(1L, 1L, 1L);
+            verify(dashboardService).getDashboardSummary(1L, 1L, 1L);
         }
 
         @Test
         @DisplayName("Should return 403 FORBIDDEN when user doesn't own brand")
         void shouldReturnForbidden_WhenUserDoesNotOwnBrand() throws Exception {
             // Given
-            when(dashboardService.getDashboard(2L, null, 1L))
+            when(dashboardService.getDashboardSummary(2L, null, 1L))
                 .thenThrow(new ResourceAccessDeniedException("Access denied"));
 
             // When
@@ -169,14 +154,14 @@ class DashboardControllerTest extends ControllerTestBase {
             // Then
             result.andExpect(status().isForbidden());
 
-            verify(dashboardService).getDashboard(2L, null, 1L);
+            verify(dashboardService).getDashboardSummary(2L, null, 1L);
         }
 
         @Test
         @DisplayName("Should return 404 NOT FOUND when brand doesn't exist")
         void shouldReturnNotFound_WhenBrandDoesNotExist() throws Exception {
             // Given
-            when(dashboardService.getDashboard(999L, null, 1L))
+            when(dashboardService.getDashboardSummary(999L, null, 1L))
                 .thenThrow(new ResourceNotFoundException("Brand", "id", 999L));
 
             // When
@@ -188,7 +173,7 @@ class DashboardControllerTest extends ControllerTestBase {
             // Then
             result.andExpect(status().isNotFound());
 
-            verify(dashboardService).getDashboard(999L, null, 1L);
+            verify(dashboardService).getDashboardSummary(999L, null, 1L);
         }
 
         @Test
@@ -202,7 +187,7 @@ class DashboardControllerTest extends ControllerTestBase {
             // Then
             result.andExpect(status().isUnauthorized());
 
-            verify(dashboardService, never()).getDashboard(any(), any(), any());
+            verify(dashboardService, never()).getDashboardSummary(any(), any(), any());
         }
     }
 

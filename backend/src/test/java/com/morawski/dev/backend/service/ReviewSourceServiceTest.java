@@ -1,15 +1,18 @@
 package com.morawski.dev.backend.service;
 
 import com.morawski.dev.backend.dto.common.AuthMethod;
+import com.morawski.dev.backend.dto.common.JobStatus;
 import com.morawski.dev.backend.dto.common.SourceType;
 import com.morawski.dev.backend.dto.common.SyncStatus;
 import com.morawski.dev.backend.dto.source.*;
 import com.morawski.dev.backend.entity.Brand;
 import com.morawski.dev.backend.entity.ReviewSource;
+import com.morawski.dev.backend.entity.SyncJob;
 import com.morawski.dev.backend.entity.User;
 import com.morawski.dev.backend.exception.*;
 import com.morawski.dev.backend.mapper.ReviewSourceMapper;
 import com.morawski.dev.backend.repository.ReviewSourceRepository;
+import com.morawski.dev.backend.repository.SyncJobRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -35,6 +38,9 @@ class ReviewSourceServiceTest {
 
     @Mock
     private ReviewSourceRepository reviewSourceRepository;
+
+    @Mock
+    private SyncJobRepository syncJobRepository;
 
     @Mock
     private BrandService brandService;
@@ -108,6 +114,8 @@ class ReviewSourceServiceTest {
             when(reviewSourceRepository.existsByBrandIdAndSourceTypeAndExternalProfileId(1L, SourceType.GOOGLE, "google-456"))
                 .thenReturn(false);
             when(reviewSourceRepository.save(any(ReviewSource.class))).thenReturn(testReviewSource);
+            when(syncJobRepository.save(any(SyncJob.class)))
+                .thenReturn(SyncJob.builder().id(100L).status(JobStatus.PENDING).build());
             when(reviewSourceMapper.toReviewSourceResponse(testReviewSource)).thenReturn(testReviewSourceResponse);
 
             // When

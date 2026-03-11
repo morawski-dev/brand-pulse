@@ -1,12 +1,15 @@
 package com.morawski.dev.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.morawski.dev.backend.config.SecurityConfig;
 import com.morawski.dev.backend.dto.common.PlanType;
 import com.morawski.dev.backend.security.CustomUserDetails;
+import com.morawski.dev.backend.security.JwtAuthenticationEntryPoint;
 import com.morawski.dev.backend.security.JwtAuthenticationFilter;
 import com.morawski.dev.backend.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -21,7 +24,15 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 /**
  * Base class for controller tests providing common utilities and helper methods.
  * Extends this class to get access to security mocking and JSON conversion utilities.
+ *
+ * Imports the real {@link SecurityConfig} (plus the JWT filter and entry point) so
+ * that @WebMvcTest slices apply the production authorization rules (public auth
+ * endpoints permitted, everything else authenticated). The JWT filter receives the
+ * mocked {@link JwtTokenProvider}/{@link com.morawski.dev.backend.security.CustomUserDetailsService}
+ * and is a no-op when no Authorization header is present, so requests authenticated
+ * via {@link #authenticatedUser} are honored.
  */
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtAuthenticationEntryPoint.class})
 public abstract class ControllerTestBase {
 
     @Autowired

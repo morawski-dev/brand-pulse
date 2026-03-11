@@ -187,6 +187,7 @@ class ReviewSourceControllerTest extends ControllerTestBase {
 
             // When
             ResultActions result = mockMvc.perform(get("/api/brands/1/review-sources")
+                .with(authenticatedUser(1L, "test@example.com"))
                 .contentType(MediaType.APPLICATION_JSON));
 
             // Then
@@ -214,6 +215,7 @@ class ReviewSourceControllerTest extends ControllerTestBase {
 
             // When
             ResultActions result = mockMvc.perform(get("/api/brands/1/review-sources")
+                .with(authenticatedUser(1L, "test@example.com"))
                 .contentType(MediaType.APPLICATION_JSON));
 
             // Then
@@ -253,6 +255,7 @@ class ReviewSourceControllerTest extends ControllerTestBase {
 
             // When
             ResultActions result = mockMvc.perform(get("/api/brands/1/review-sources/1")
+                .with(authenticatedUser(1L, "test@example.com"))
                 .contentType(MediaType.APPLICATION_JSON));
 
             // Then
@@ -271,17 +274,18 @@ class ReviewSourceControllerTest extends ControllerTestBase {
 
             setupAuthenticatedUser(1L, "test@example.com");
 
-            when(reviewSourceService.getReviewSourceById(1L, 1L, 999L))
+            when(reviewSourceService.getReviewSourceById(1L, 999L, 1L))
                 .thenThrow(new ResourceNotFoundException("ReviewSource", "id", 999L));
 
             // When
             ResultActions result = mockMvc.perform(get("/api/brands/1/review-sources/999")
+                .with(authenticatedUser(1L, "test@example.com"))
                 .contentType(MediaType.APPLICATION_JSON));
 
             // Then
             result.andExpect(status().isNotFound());
 
-            verify(reviewSourceService).getReviewSourceById(1L, 1L, 999L);
+            verify(reviewSourceService).getReviewSourceById(1L, 999L, 1L);
         }
     }
 
@@ -360,7 +364,7 @@ class ReviewSourceControllerTest extends ControllerTestBase {
             // Given
 
             doThrow(new ResourceNotFoundException("ReviewSource", "id", 999L))
-                .when(reviewSourceService).deleteReviewSource(1L, 1L, 999L);
+                .when(reviewSourceService).deleteReviewSource(1L, 999L, 1L);
 
             // When
             ResultActions result = mockMvc.perform(delete("/api/brands/1/review-sources/999")
@@ -371,7 +375,7 @@ class ReviewSourceControllerTest extends ControllerTestBase {
             // Then
             result.andExpect(status().isNotFound());
 
-            verify(reviewSourceService).deleteReviewSource(1L, 1L, 999L);
+            verify(reviewSourceService).deleteReviewSource(1L, 999L, 1L);
         }
 
         @Test
@@ -381,7 +385,7 @@ class ReviewSourceControllerTest extends ControllerTestBase {
             // Given
 
             doThrow(new ResourceAccessDeniedException("Access denied"))
-                .when(reviewSourceService).deleteReviewSource(1L, 1L, 2L);
+                .when(reviewSourceService).deleteReviewSource(1L, 2L, 1L);
 
             // When
             ResultActions result = mockMvc.perform(delete("/api/brands/1/review-sources/2")
@@ -392,7 +396,7 @@ class ReviewSourceControllerTest extends ControllerTestBase {
             // Then
             result.andExpect(status().isForbidden());
 
-            verify(reviewSourceService).deleteReviewSource(1L, 1L, 2L);
+            verify(reviewSourceService).deleteReviewSource(1L, 2L, 1L);
         }
     }
 }

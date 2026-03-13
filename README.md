@@ -4,220 +4,202 @@
 
 **BrandPulse** is a SaaS web application that helps small and medium-sized service businesses (restaurants, hotels, beauty salons, etc.) aggregate, monitor, and analyze customer reviews from multiple platforms including Google, Facebook, and Trustpilot. The system uses AI to perform sentiment analysis and provides actionable insights through an intuitive dashboard.
 
+**Business model:** Freemium — the free plan allows monitoring of one review source.
+
 ## Key Features
 
-- **Multi-Source Review Aggregation**: Collect reviews from Google, Facebook, and Trustpilot in one place
-- **AI-Powered Sentiment Analysis**: Automatic classification of reviews as positive, negative, or neutral
-- **Smart Summarization**: AI-generated text summaries for each review source
-- **Interactive Dashboard**: Filter reviews by source, sentiment, and star rating
-- **Manual Corrections**: Override AI sentiment classifications when needed
-- **Automated Data Refresh**: Daily synchronization at 3:00 AM CET + manual refresh option
-- **Freemium Model**: Free tier allows monitoring of one review source
+- **Multi-Source Review Aggregation** — collect reviews in one place (Google first; Facebook & Trustpilot planned)
+- **AI-Powered Sentiment Analysis** — automatic classification as positive / negative / neutral
+- **Smart Summarization** — AI-generated text summary per source
+- **Interactive Dashboard** — filter reviews by source, sentiment, and star rating; "All locations" vs single-source view
+- **Manual Corrections** — override AI sentiment classifications
+- **Automated Data Refresh** — daily sync (3:00 AM CET) + manual refresh (24h cooldown)
+- **Freemium Gate** — free tier limited to one review source
+
+## Current Status
+
+This is an actively developed MVP. High-level state:
+
+| Area | Status |
+|---|---|
+| Auth (register / login / JWT) | ✅ Implemented (end-to-end) |
+| Onboarding wizard (5 steps) | ✅ Implemented |
+| Review import jobs (initial 90-day + manual + daily CRON) | ✅ Implemented (background poller) |
+| Dashboard (metrics, sentiment %, AI summary, reviews) | ✅ Implemented |
+| AI sentiment + summaries (OpenRouter) | ✅ Implemented **with graceful fallback** to a rating heuristic / local summary when no API key is configured |
+| Google review fetching | ⚠️ **Mock data** — real Google API integration pending (see `docs/IMPLEMENTATION_PLAN.md`) |
+| Facebook / Trustpilot | ⏳ Phase 2 |
+| Weekly email reports | ⏳ Phase 2 |
 
 ## Tech Stack
 
-### Backend
-- **Java 21** + **Spring Boot 3.5.6**
-- **PostgreSQL 16** - Primary database
-- **Spring Data JPA** + **Hibernate** - ORM and data persistence
-- **Spring Security** - Authentication and authorization
-- **Liquibase** - Database schema migrations
-- **Quartz Scheduler** - Scheduled jobs for review synchronization
-- **Spring Mail** - Weekly email reports
-- **Spring Cache** (Caffeine) - Performance optimization
-- **Lombok** - Reduce boilerplate code
+### Backend (`backend/`)
+- **Java 21** + **Spring Boot 3.3.6**
+- **PostgreSQL 16** + **Spring Data JPA / Hibernate**
+- **Liquibase** — schema migrations (enabled, `V001`–`V012`)
+- **Spring Security** + **JWT** (jjwt) — stateless auth
+- **springdoc-openapi** — Swagger UI / OpenAPI
+- **Caffeine** — caching · **Spring Scheduling** — background sync jobs · **Spring Mail** — reports (Phase 2)
+- **Lombok**
 
-### Frontend (Planned)
-- **Next.js 14** - React framework
-- **TypeScript 5** - Type safety
-- **Tailwind CSS 3** - Styling
-- **Shadcn/ui** - Component library
+### Frontend (`frontend/`)
+- **Next.js 14** (App Router) + **React 18** + **TypeScript 5**
+- **Tailwind CSS 3** + **Radix UI** (shadcn/ui-style components) + **lucide-react** + **sonner**
+- **Jest** + **Testing Library**
 
 ### AI Integration
-- **Openrouter.ai** - Access to multiple AI models (OpenAI, Anthropic, Google)
-- Used for sentiment classification and text summarization
+- **OpenRouter.ai** — access to multiple models (OpenAI, Anthropic, Google) for sentiment classification and summarization. Works without a key via a local fallback (rating-based sentiment + statistics-based summary).
 
 ### Infrastructure
-- **Docker Compose** - Local development environment
-- **GitHub Actions** - CI/CD (planned)
-- **AWS** - Production deployment (planned)
+- **Docker Compose** — full local stack (PostgreSQL + backend + frontend)
+- **GitHub Actions** — CI (backend `verify`, frontend `lint` + `build`) and AWS Copilot deploy (`.github/workflows/main.yml`)
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
-
-- **Java 21** or higher ([Download](https://adoptium.net/))
-- **Maven 3.9+** (included via Maven Wrapper)
-- **Docker** and **Docker Compose** ([Download](https://docs.docker.com/get-docker/))
+- **Java 21** (the build targets Java 21 — JDK 21 is required for the backend; newer JDKs may break Lombok/MapStruct annotation processing)
+- **Maven** — provided via the Maven Wrapper (`backend/mvnw` / `backend/mvnw.cmd`)
+- **Node.js 20+** and **npm** (for the frontend)
+- **Docker** + **Docker Compose**
 - **Git**
 
 ## Getting Started
 
-### 1. Clone the Repository
+### Option A — Full stack with Docker (quickest)
 
 ```bash
-git clone https://github.com/yourusername/brand-pulse.git
-cd brand-pulse
+docker compose up -d            # starts postgres + backend + frontend
+docker compose ps               # verify all are up
 ```
 
-### 2. Start PostgreSQL Database
+- Backend: http://localhost:8080
+- Frontend: http://localhost:3000
+- PostgreSQL: localhost:5432 (db `brandpulse`, user `brandpulse_user`, pass `brandpulse_pass`)
+
+> **Note:** the frontend Docker image is built with `NEXT_PUBLIC_API_URL=http://backend:8080`, which is only reachable inside the Docker network. Because API calls are made **client-side** from the browser, the containerized frontend cannot reach the backend from your host browser. For local UI work use **Option B** (frontend dev server), or rebuild the frontend image with a host-reachable API URL. Fixing this for real deployments is a tracked follow-up.
+
+### Option B — Backend in Docker, frontend in dev mode (recommended for UI work)
 
 ```bash
-# Start PostgreSQL container
-docker-compose up -d
+# 1. Start backend + database
+docker compose up -d postgres backend
 
-# Verify it's running
-docker-compose ps
-
-# View logs (optional)
-docker-compose logs -f postgres
+# 2. Run the frontend dev server (uses frontend/.env.local -> NEXT_PUBLIC_API_URL=http://localhost:8080)
+cd frontend
+npm install
+npm run dev                     # http://localhost:3000
 ```
 
-Database connection details:
-- **Host**: localhost:5432
-- **Database**: brandpulse
-- **Username**: brandpulse_user
-- **Password**: brandpulse_pass
+CORS on the backend allows `http://localhost:3000`, so the dev server talks to the backend directly.
 
-### 3. Build the Backend
+### Option C — Run the backend from source (without its container)
 
 ```bash
-# Build the project
+docker compose up -d postgres   # database only
+
+# Build & run the backend (JDK 21 required)
 ./backend/mvnw clean install -f backend/pom.xml
-```
-
-### 4. Run the Application
-
-```bash
-# Start the Spring Boot application
 ./backend/mvnw spring-boot:run -f backend/pom.xml
 ```
 
-The backend will start on **http://localhost:8080**
+On Windows (PowerShell), set JDK 21 for the session if it isn't the default, e.g.:
 
-### 5. Verify Installation
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Amazon Corretto\jdk21.0.4_7'
+.\backend\mvnw.cmd spring-boot:run -f backend\pom.xml
+```
+
+### Verify
 
 ```bash
-# Actuator endpoints
-curl http://localhost:8080/actuator/health
+curl http://localhost:8080/actuator/health      # -> {"status":"UP", ...}
 ```
 
-Expected response:
-```json
-{
-  "status": "UP",
-  "timestamp": "2025-10-11T...",
-  "service": "BrandPulse API",
-  "version": "0.0.1-SNAPSHOT"
-}
+### (Optional) Configure AI
+
+AI features run on a local fallback out of the box. To enable real OpenRouter analysis, set a real key (env var or `application.properties`):
+
 ```
+openrouter.api.key=sk-...your-key...
+openrouter.model=anthropic/claude-3.5-sonnet
+```
+
+## API Documentation
+
+Interactive API docs (springdoc-openapi) are available when the backend is running:
+
+- **Swagger UI:** http://localhost:8080/swagger-ui.html
+- **OpenAPI JSON:** http://localhost:8080/api-docs
+
+Public endpoints (no auth): `/api/auth/register`, `/api/auth/login`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/actuator/**`, Swagger/OpenAPI. All other `/api/**` endpoints require a `Authorization: Bearer <JWT>` header.
+
+Main endpoint groups: `/api/auth/*`, `/api/users/me`, `/api/brands`, `/api/brands/{brandId}/review-sources`, `/api/sources/{sourceId}/import-status`, `/api/brands/{brandId}/reviews`, `/api/brands/{brandId}/sync`, `/api/sync-jobs/{jobId}`, `/api/dashboard/summary`.
 
 ## Running Tests
 
 ```bash
-# Run all tests
+# Backend (JDK 21). Integration tests use Testcontainers, so Docker must be running.
 ./backend/mvnw test -f backend/pom.xml
-
-# Run a specific test class
 ./backend/mvnw test -Dtest=ClassName -f backend/pom.xml
-
-# Run a specific test method
-./backend/mvnw test -Dtest=ClassName#methodName -f backend/pom.xml
-
-# Package without tests
 ./backend/mvnw clean package -DskipTests -f backend/pom.xml
+
+# Frontend
+cd frontend
+npm test
+npm run lint
+npm run build
 ```
+
+> Note: the backend controller/service test suite is currently a work in progress and partially red (test-harness configuration, not production-code failures) — see `docs/SESSION_NOTES.md`. Stabilizing it is a tracked task.
 
 ## Project Structure
 
 ```
 brand-pulse/
-├── backend/                    # Spring Boot backend
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/morawski/dev/backend/
-│   │   │   │   ├── config/         # Configuration classes
-│   │   │   │   ├── controller/     # REST controllers
-│   │   │   │   ├── dto/            # Data Transfer Objects
-│   │   │   │   ├── entity/         # JPA entities
-│   │   │   │   ├── repository/     # Spring Data repositories
-│   │   │   │   ├── service/        # Business logic
-│   │   │   │   ├── exception/      # Custom exceptions
-│   │   │   │   ├── security/       # Security components
-│   │   │   │   ├── scheduler/      # Scheduled jobs
-│   │   │   │   └── util/           # Utilities
-│   │   │   └── resources/
-│   │   │       ├── db/changelog/   # Liquibase migrations
-│   │   │       └── application.properties
-│   │   └── test/                   # Unit and integration tests
-│   ├── pom.xml                     # Maven dependencies
-│   └── mvnw                        # Maven Wrapper
-├── frontend/                       # Next.js frontend (planned)
-├── docs/                           # Project documentation
-│   ├── project-prd-en.md          # Product Requirements
-│   ├── mvp-en.md                  # MVP definition
-│   └── tech-stack-en.md           # Tech stack details
-├── docker-compose.yml             # Local development environment
-├── CLAUDE.md                      # AI assistant guidance
-└── README.md                      # This file
+├── backend/                         # Spring Boot backend (Java 21)
+│   ├── src/main/java/com/morawski/dev/backend/
+│   │   ├── config/      controller/   dto/        entity/
+│   │   ├── repository/  service/      mapper/     security/
+│   │   ├── scheduler/   exception/    util/
+│   │   └── BackendApplication.java
+│   ├── src/main/resources/
+│   │   ├── db/changelog/            # Liquibase migrations (V001–V012)
+│   │   └── application.properties
+│   ├── src/test/                    # unit + Testcontainers integration tests
+│   ├── Dockerfile
+│   └── pom.xml / mvnw
+├── frontend/                        # Next.js 14 app (App Router, TypeScript)
+│   ├── app/                         # routes: /, login, register, onboarding, dashboard, ...
+│   ├── components/  context/  hooks/  lib/        # UI, AuthContext, hooks, API client + types
+│   ├── Dockerfile
+│   └── package.json
+├── docker-compose.yml               # postgres + backend + frontend
+└── README.md
 ```
 
 ## Configuration
 
-The main configuration file is located at `backend/src/main/resources/application.properties`.
+Backend config lives in `backend/src/main/resources/application.properties`:
 
-### Key Configuration Areas:
+- **Database** — PostgreSQL connection (overridable via `SPRING_DATASOURCE_*` env vars)
+- **Liquibase** — enabled; migrations run on startup
+- **Security/JWT** — `jwt.secret`, `jwt.expiration-minutes` (use a real secret in production)
+- **CORS** — allows `http://localhost:3000` and `https://app.brandpulse.io`
+- **Cache** — Caffeine (named caches: `dashboard`, `summaries`, `reviews`, `sources`, `brands`)
+- **Mail** — SMTP placeholders (mail health contributor disabled in dev)
+- **AI** — OpenRouter URL / key / model
 
-- **Database**: PostgreSQL connection settings
-- **Security**: CORS, JWT settings (placeholders)
-- **Mail**: SMTP configuration for email reports
-- **Scheduler**: Thread pool for background jobs
-- **Cache**: Caffeine cache settings (10-minute TTL)
-- **AI**: OpenRouter.ai API configuration
-
-### Environment-Specific Configuration:
-
-The application uses Spring profiles. Current active profile: `dev`
-
-To use a different profile:
-```bash
-./backend/mvnw spring-boot:run -Dspring.profiles.active=prod -f backend/pom.xml
-```
-
-## API Documentation
-
-### Available Endpoints:
-
-**Actuator Endpoints:**
-- `GET /actuator/health` - Detailed health information
-- `GET /actuator/info` - Application information
-- `GET /actuator/prometheus` - Prometheus metrics
-
-### Swagger UI (Planned)
-
-Once implemented, API documentation will be available at:
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8080/api-docs`
-
+Active Spring profile defaults to `dev` (the backend container sets it explicitly). Frontend API base URL: `frontend/.env.local` (`NEXT_PUBLIC_API_URL`).
 
 ## Success Metrics (MVP)
 
-- **Time to Value**: 90% of users configure first source within 10 minutes
-- **Sentiment Accuracy**: 75% AI sentiment analysis accuracy
-- **Activation Rate**: 60% of users configure a source within 7 days
-- **Retention**: 35% retention (3+ logins in first 4 weeks)
-
-## Contributing
-
-This is a private project currently in development. Contribution guidelines will be added once the MVP is complete.
+- **Time to Value:** 90% of users configure their first source within 10 minutes
+- **Sentiment Accuracy:** ≥75% agreement between AI and manual classification
+- **Activation Rate:** 60% of new users configure a source within 7 days
+- **Retention:** 35% log in at least 3 times in the first 4 weeks
 
 ## License
 
-This project is proprietary software. All rights reserved.
-
-## Support
-
-For issues and questions, please contact the development team or create an issue in the GitHub repository.
+Proprietary software. All rights reserved.
 
 ---
 

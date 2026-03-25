@@ -164,7 +164,7 @@ export function useReviewFilters(): UseReviewFiltersReturn {
 
       if (key === 'sentiment' || key === 'rating') {
         // Toggle value in Set
-        const currentSet = new Set(prev[key]);
+        const currentSet = new Set<any>(prev[key] as Iterable<any>);
 
         if (currentSet.has(value)) {
           currentSet.delete(value);
@@ -197,7 +197,7 @@ export function useReviewFilters(): UseReviewFiltersReturn {
       if (key === 'sentiment' || key === 'rating') {
         if (value !== undefined) {
           // Remove specific value from Set
-          const currentSet = new Set(prev[key]);
+          const currentSet = new Set<any>(prev[key] as Iterable<any>);
           currentSet.delete(value);
           newFilters[key] = currentSet as any;
         } else {

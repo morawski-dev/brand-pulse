@@ -38,11 +38,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Baked into the client bundle at build time. Use the host-reachable URL
+        # (the browser runs on the host, not inside the Docker network).
+        NEXT_PUBLIC_API_URL: http://localhost:8080
     container_name: brandpulse-frontend
     depends_on:
       - backend
-    environment:
-      NEXT_PUBLIC_API_URL: http://backend:8080
     ports:
       - "3000:3000"
 

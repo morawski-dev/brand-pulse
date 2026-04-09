@@ -1,0 +1,15 @@
+# Dependencies & build output are produced inside the image
+node_modules
+.next
+out
+coverage
+
+# Local env files must NOT leak into the image; NEXT_PUBLIC_API_URL is set via build ARG
+.env*.local
+
+# VCS / misc
+.git
+.gitignore
+npm-debug.log*
+Dockerfile
+.dockerignore

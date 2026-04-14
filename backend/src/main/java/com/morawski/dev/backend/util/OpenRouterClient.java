@@ -291,6 +291,9 @@ public class OpenRouterClient {
             2. Main positive themes (what customers praise)
             3. Main negative themes (what customers complain about)
 
+            Respond with PLAIN TEXT only — no Markdown, no headings (#), no blockquotes (>),
+            no bullet lists, no bold (**). Just 2-3 plain sentences.
+
             Format: "X%% pozytywnych opinii. Klienci chwalą... Główne skargi dotyczą..."
             """,
             totalReviews,

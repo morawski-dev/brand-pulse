@@ -49,8 +49,7 @@ public class GoogleReviewSyncHandler {
 
     private final ReviewRepository reviewRepository;
     private final OpenRouterClient openRouterClient;
-    // TODO: Add GoogleApiClient when implemented (Faza 2)
-    // private final GoogleApiClient googleApiClient;
+    private final GooglePlacesClient googlePlacesClient;
 
     /**
      * Sync reviews from Google for a specific review source.
@@ -118,21 +117,17 @@ public class GoogleReviewSyncHandler {
     }
 
     /**
-     * Fetch reviews from Google My Business API.
+     * Fetch reviews for a source's place.
      *
-     * TODO: Implement actual Google API integration.
-     * For now, returns mock data for testing.
+     * Uses the real Google Places API when a key is configured (the source's
+     * {@code externalProfileId} is the Place ID); otherwise returns mock data so
+     * the app works end-to-end without Google credentials.
      *
-     * Google API Integration Plan:
-     * 1. Decrypt credentials from reviewSource.credentialsEncrypted
-     * 2. Extract Google API key or OAuth token
-     * 3. Call Google Places API: GET /maps/api/place/details/json
-     * 4. Parse reviews from response
-     * 5. Map to GoogleReviewDTO
+     * Note: Places API returns at most ~5 reviews and has no historical range, so
+     * {@code startDate}/{@code endDate} are not used to page — we import what Google
+     * returns and rely on dedup ({@code externalReviewId} + content hash).
      *
-     * @param reviewSource Review source with API credentials
-     * @param startDate Start date for filtering reviews
-     * @param endDate End date for filtering reviews
+     * @param reviewSource Review source (externalProfileId = Google Place ID)
      * @return List of Google reviews
      */
     private List<GoogleReviewDTO> fetchReviewsFromGoogle(
@@ -140,27 +135,17 @@ public class GoogleReviewSyncHandler {
         LocalDate startDate,
         LocalDate endDate
     ) {
-        log.debug("Fetching reviews from Google API for source: {}", reviewSource.getId());
+        if (googlePlacesClient.isConfigured()) {
+            log.debug("Fetching reviews from Google Places API for source: {}", reviewSource.getId());
+            return googlePlacesClient.fetchReviews(reviewSource.getExternalProfileId());
+        }
 
-        // TODO: Replace with actual Google API call
-        // Example:
-        // String apiKey = decryptCredentials(reviewSource.getCredentialsEncrypted());
-        // String placeId = reviewSource.getExternalProfileId();
-        // String url = String.format(
-        //     "https://maps.googleapis.com/maps/api/place/details/json?place_id=%s&key=%s&fields=reviews",
-        //     placeId, apiKey
-        // );
-        // ResponseEntity<GooglePlacesResponse> response = restTemplate.getForEntity(url, GooglePlacesResponse.class);
-        // return mapToGoogleReviewDTOs(response.getBody().getReviews());
-
-        // Mock data for development
-        log.warn("Using mock Google API data - implement actual API integration");
+        log.warn("Google Places API key not configured - using mock data for source: {}", reviewSource.getId());
         return createMockGoogleReviews();
     }
 
     /**
-     * Create mock Google reviews for testing.
-     * TODO: Remove when Google API integration is implemented.
+     * Mock reviews used when no Google Places API key is configured (dev/offline).
      *
      * @return List of mock reviews
      */
@@ -345,19 +330,5 @@ public class GoogleReviewSyncHandler {
             hexString.append(hex);
         }
         return hexString.toString();
-    }
-
-    /**
-     * DTO for Google review data.
-     * Internal structure for mapping Google API response.
-     */
-    @lombok.Data
-    @lombok.AllArgsConstructor
-    private static class GoogleReviewDTO {
-        private String externalId;
-        private String content;
-        private String authorName;
-        private Short rating;
-        private Instant publishedAt;
     }
 }

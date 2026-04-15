@@ -3,8 +3,6 @@
 # ===========================
 .DS_Store
 Thumbs.db
-nul
-**/nul
 
 # JetBrains IDEs
 .idea/
@@ -67,6 +65,15 @@ yarn-error.log*
 # ===========================
 .vercel
 
+# ===========================
+# Windows reserved device name
+# A file literally named `nul` appears when a Windows-style redirect
+# (`> nul` / `2>nul`) runs under a Unix shell (Git Bash / MSYS), which
+# treats `nul` as a regular file instead of the discard device.
+# Pattern without a slash ignores it in any directory.
+# ===========================
+nul
+
 docs/
 prompts/
-copilot/
+

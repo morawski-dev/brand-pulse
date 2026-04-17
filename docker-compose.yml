@@ -31,6 +31,12 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/brandpulse
       SPRING_DATASOURCE_USERNAME: brandpulse_user
       SPRING_DATASOURCE_PASSWORD: brandpulse_pass
+      # OpenRouter AI: provide the real key in a root .env file (gitignored).
+      # Without it the app falls back to local heuristic sentiment + summary.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-sk-demo-xyz123}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-anthropic/claude-sonnet-4.6}
+      # Google Places API (New): real key enables live reviews (else mock data).
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
     ports:
       - "8080:8080"
 

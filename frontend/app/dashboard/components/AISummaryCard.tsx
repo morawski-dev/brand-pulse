@@ -48,6 +48,24 @@ function isExpiringSoon(validUntil: string): boolean {
   return hoursRemaining < 2; // Less than 2 hours
 }
 
+/**
+ * Strip common Markdown tokens so the summary renders cleanly as plain text.
+ * The prompt asks the model for plain text, but this is a defensive fallback in
+ * case it still returns headings/blockquotes/bold/lists.
+ */
+function toPlainText(text: string): string {
+  return text
+    .replace(/^\s*#{1,6}\s+/gm, '')   // headings (#, ##, ...)
+    .replace(/^\s*>\s?/gm, '')         // blockquotes
+    .replace(/^\s*[-*+]\s+/gm, '')     // bullet list markers
+    .replace(/^\s*-{3,}\s*$/gm, '')    // horizontal rules
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // bold
+    .replace(/\*(.+?)\*/g, '$1')       // italic
+    .replace(/`([^`]+)`/g, '$1')       // inline code
+    .replace(/\n{3,}/g, '\n\n')        // collapse extra blank lines
+    .trim();
+}
+
 // ========================================
 // COMPONENT
 // ========================================
@@ -144,10 +162,10 @@ export function AISummaryCard({ aiSummary, isLoading = false }: AISummaryCardPro
         </div>
       </div>
 
-      {/* Summary Text */}
+      {/* Summary Text (markdown stripped to plain text, line breaks preserved) */}
       <div className="prose prose-sm max-w-none">
-        <p className="text-gray-700 leading-relaxed">
-          {aiSummary.text}
+        <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+          {toPlainText(aiSummary.text)}
         </p>
       </div>
 

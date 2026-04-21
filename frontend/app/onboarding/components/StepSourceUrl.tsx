@@ -304,9 +304,9 @@ export function StepSourceUrl({
           <ul className="mt-2 text-sm text-blue-800 space-y-1 list-disc list-inside">
             {sourceType === SourceType.GOOGLE && (
               <>
-                <li>Wyszukaj swoją firmę w Google Maps</li>
-                <li>Skopiuj adres URL z paska przeglądarki</li>
-                <li>URL powinien zawierać &quot;/maps/place/&quot;</li>
+                <li>Otwórz narzędzie Google &quot;Place ID Finder&quot; i wyszukaj swoją firmę</li>
+                <li>Skopiuj wyświetlony Place ID (zaczyna się od &quot;ChIJ...&quot;)</li>
+                <li>Wklej go powyżej (albo wklej link Map zawierający &quot;place_id:&quot;)</li>
               </>
             )}
             {sourceType === SourceType.FACEBOOK && (

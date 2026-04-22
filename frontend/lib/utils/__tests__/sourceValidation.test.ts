@@ -20,10 +20,22 @@ describe('validateSourceUrl', () => {
     expect(result.error).toBe('Adres URL jest wymagany');
   });
 
-  it('accepts a valid Google Maps place URL', () => {
+  it('accepts a raw Google Place ID', () => {
+    expect(
+      validateSourceUrl('ChIJN1t_tDeuEmsRUsoyG83frY4', SourceType.GOOGLE).isValid
+    ).toBe(true);
+  });
+
+  it('accepts a Maps link containing place_id:', () => {
+    expect(
+      validateSourceUrl('https://www.google.com/maps/place/?q=place_id:ChIJN1t_tDeuEmsRUsoyG83frY4', SourceType.GOOGLE).isValid
+    ).toBe(true);
+  });
+
+  it('rejects a Google input without a Place ID', () => {
     expect(
       validateSourceUrl('https://www.google.com/maps/place/My+Business', SourceType.GOOGLE).isValid
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('accepts a valid Trustpilot review URL', () => {
@@ -32,10 +44,10 @@ describe('validateSourceUrl', () => {
     ).toBe(true);
   });
 
-  it('rejects a URL that does not match the selected platform', () => {
-    const result = validateSourceUrl('https://facebook.com/test', SourceType.GOOGLE);
+  it('rejects a URL that does not match the selected platform (Facebook)', () => {
+    const result = validateSourceUrl('https://www.trustpilot.com/review/x', SourceType.FACEBOOK);
     expect(result.isValid).toBe(false);
-    expect(result.error).toContain('Google');
+    expect(result.error).toContain('Facebook');
   });
 
   it('rejects a Trustpilot URL without /review/ path', () => {
@@ -46,16 +58,16 @@ describe('validateSourceUrl', () => {
 });
 
 describe('extractExternalId', () => {
-  it('extracts the Google place name (decodeURIComponent keeps + literal)', () => {
+  it('returns a raw Google Place ID as-is', () => {
     expect(
-      extractExternalId('https://www.google.com/maps/place/My+Restaurant', SourceType.GOOGLE)
-    ).toBe('My+Restaurant');
+      extractExternalId('ChIJN1t_tDeuEmsRUsoyG83frY4', SourceType.GOOGLE)
+    ).toBe('ChIJN1t_tDeuEmsRUsoyG83frY4');
   });
 
-  it('percent-decodes the extracted Google place name', () => {
+  it('extracts a Google Place ID from a place_id: link', () => {
     expect(
-      extractExternalId('https://www.google.com/maps/place/My%20Restaurant', SourceType.GOOGLE)
-    ).toBe('My Restaurant');
+      extractExternalId('https://www.google.com/maps/place/?q=place_id:ChIJxyz123ABC456DEF789', SourceType.GOOGLE)
+    ).toBe('ChIJxyz123ABC456DEF789');
   });
 
   it('extracts a Facebook page handle', () => {
@@ -80,17 +92,17 @@ describe('extractExternalId', () => {
 });
 
 describe('validateAndExtract', () => {
-  it('returns isValid + externalId for a valid URL', () => {
+  it('returns isValid + Place ID for valid Google input', () => {
     const result = validateAndExtract(
-      'https://www.google.com/maps/place/Test',
+      'ChIJN1t_tDeuEmsRUsoyG83frY4',
       SourceType.GOOGLE
     );
     expect(result.isValid).toBe(true);
-    expect(result.externalId).toBe('Test');
+    expect(result.externalId).toBe('ChIJN1t_tDeuEmsRUsoyG83frY4');
   });
 
-  it('propagates a format error for an invalid URL', () => {
-    const result = validateAndExtract('invalid-url', SourceType.GOOGLE);
+  it('propagates a format error for invalid Google input', () => {
+    const result = validateAndExtract('not-a-place-id', SourceType.GOOGLE);
     expect(result.isValid).toBe(false);
     expect(result.error).toBeDefined();
   });

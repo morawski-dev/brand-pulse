@@ -52,6 +52,29 @@ const EXTRACTION_PATTERNS: Record<
   },
 };
 
+/**
+ * Extract a Google Place ID from user input.
+ *
+ * Google Places API identifies a place by its Place ID (e.g. "ChIJ..."), not by
+ * name. We accept either a raw Place ID or a string containing "place_id:<ID>"
+ * (e.g. a Maps link of the form .../place/?q=place_id:ChIJ...).
+ *
+ * @param input - raw user input
+ * @returns the Place ID, or null if none found
+ */
+function extractGooglePlaceId(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const withParam = trimmed.match(/place_id[:=]([A-Za-z0-9_-]+)/i);
+  if (withParam) return withParam[1];
+
+  // Raw Place ID: alphanumeric + _/- , reasonably long. Most start with "ChIJ".
+  if (/^[A-Za-z0-9_-]{20,}$/.test(trimmed)) return trimmed;
+
+  return null;
+}
+
 // ========================================
 // VALIDATION FUNCTIONS
 // ========================================
@@ -84,6 +107,17 @@ export function validateSourceUrl(
       isValid: false,
       error: 'Adres URL jest wymagany',
     };
+  }
+
+  // Google uses a Place ID (not a URL) for the Places API.
+  if (sourceType === SourceType.GOOGLE) {
+    return extractGooglePlaceId(url)
+      ? { isValid: true }
+      : {
+          isValid: false,
+          error:
+            'Podaj prawidłowy Place ID (np. ChIJ...) lub link zawierający place_id:',
+        };
   }
 
   // Check format
@@ -127,6 +161,11 @@ export function extractExternalId(
 ): string | null {
   if (!url || url.trim().length === 0) {
     return null;
+  }
+
+  // Google: the external id IS the Place ID.
+  if (sourceType === SourceType.GOOGLE) {
+    return extractGooglePlaceId(url);
   }
 
   try {
@@ -211,7 +250,7 @@ export function validateAndExtract(
 export function getExampleUrl(sourceType: SourceType): string {
   const examples: Record<SourceType, string> = {
     [SourceType.GOOGLE]:
-      'https://www.google.com/maps/place/Nazwa+Firmy/@50.123,19.456',
+      'https://www.google.com/maps/place/?q=place_id:ChIJN1t_tDeuEmsRUsoyG83frY4',
     [SourceType.FACEBOOK]: 'https://www.facebook.com/twoja-firma',
     [SourceType.TRUSTPILOT]:
       'https://www.trustpilot.com/review/twojadomena.pl',
@@ -275,7 +314,7 @@ export function getSourceDescription(sourceType: SourceType): string {
 export function getUrlHelpText(sourceType: SourceType): string {
   const helpTexts: Record<SourceType, string> = {
     [SourceType.GOOGLE]:
-      'Skopiuj adres URL z Google Maps lub Google Business Profile',
+      'Wklej Place ID (np. ChIJ...) — znajdziesz go w narzędziu Google "Place ID Finder"',
     [SourceType.FACEBOOK]:
       'Skopiuj adres URL strony firmowej z paska adresu przeglądarki',
     [SourceType.TRUSTPILOT]:

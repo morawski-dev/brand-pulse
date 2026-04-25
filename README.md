@@ -24,10 +24,10 @@ This is an actively developed MVP. High-level state:
 |---|---|
 | Auth (register / login / JWT) | ✅ Implemented (end-to-end) |
 | Onboarding wizard (5 steps) | ✅ Implemented |
-| Review import jobs (initial 90-day + manual + daily CRON) | ✅ Implemented (background poller) |
+| Review import jobs (manual + daily CRON 3 AM) | ✅ Implemented (background poller) |
 | Dashboard (metrics, sentiment %, AI summary, reviews) | ✅ Implemented |
 | AI sentiment + summaries (OpenRouter) | ✅ Implemented **with graceful fallback** to a rating heuristic / local summary when no API key is configured |
-| Google review fetching | ⚠️ **Mock data** — real Google API integration pending (see `docs/IMPLEMENTATION_PLAN.md`) |
+| Google review fetching | ✅ **Google Places API (New)** via Place ID when `GOOGLE_PLACES_API_KEY` is set (else mock). ⚠️ Places returns **at most ~5 reviews/place, no history** — so the "90-day import" is not achievable without Business Profile |
 | Facebook / Trustpilot | ⏳ Phase 2 |
 | Weekly email reports | ⏳ Phase 2 |
 
@@ -47,8 +47,9 @@ This is an actively developed MVP. High-level state:
 - **Tailwind CSS 3** + **Radix UI** (shadcn/ui-style components) + **lucide-react** + **sonner**
 - **Jest** + **Testing Library**
 
-### AI Integration
-- **OpenRouter.ai** — access to multiple models (OpenAI, Anthropic, Google) for sentiment classification and summarization. Works without a key via a local fallback (rating-based sentiment + statistics-based summary).
+### External Integrations
+- **OpenRouter.ai** — multiple models (OpenAI, Anthropic, Google) for per-review sentiment classification and source summarization. Works without a key via a local fallback (rating-based sentiment + statistics-based summary). Default model `anthropic/claude-sonnet-4.6`.
+- **Google Places API (New)** — fetches reviews by Place ID (Place Details). Works without a key via mock data. Limited to ~5 reviews per place (no history) — the only option without a Google Business Profile.
 
 ### Infrastructure
 - **Docker Compose** — full local stack (PostgreSQL + backend + frontend)
@@ -114,14 +115,24 @@ $env:JAVA_HOME = 'C:\Program Files\Amazon Corretto\jdk21.0.4_7'
 curl http://localhost:8080/actuator/health      # -> {"status":"UP", ...}
 ```
 
-### (Optional) Configure AI
+### (Optional) Configure AI and Google reviews
 
-AI features run on a local fallback out of the box. To enable real OpenRouter analysis, set a real key (env var or `application.properties`):
+Both run with safe fallbacks out of the box (heuristic AI, mock Google reviews). To use the real services, copy `.env.example` to `.env` in the repo root (gitignored — docker-compose reads it automatically) and set:
 
 ```
-openrouter.api.key=sk-...your-key...
-openrouter.model=anthropic/claude-3.5-sonnet
+# OpenRouter AI (https://openrouter.ai/keys) — without it: local fallback summary + rating heuristic
+OPENROUTER_API_KEY=sk-or-...
+# Optional model id (default anthropic/claude-sonnet-4.6); cheaper: anthropic/claude-3.5-haiku
+# OPENROUTER_MODEL=anthropic/claude-sonnet-4.6
+
+# Google Places API (New) — enable the API + billing in Google Cloud, create a key.
+# Without it: mock review data. A review source's externalProfileId must be the Place ID.
+GOOGLE_PLACES_API_KEY=AIza...
 ```
+
+These map to Spring properties via env (`openrouter.api.key`, `google.places.api.key`). For a from-source run (Option C) export the same env vars in your shell. **Never commit real keys.**
+
+**Using Google reviews:** find your business's **Place ID** with the [Place ID Finder](https://developers.google.com/maps/documentation/places/web-service/place-id), then paste it (e.g. `ChIJ...`) in the onboarding Google step. Note the hard Places API limit: **at most ~5 reviews per place, no history**.
 
 ## API Documentation
 
@@ -149,7 +160,7 @@ npm run lint
 npm run build
 ```
 
-> Note: the backend controller/service test suite is currently a work in progress and partially red (test-harness configuration, not production-code failures) — see `docs/SESSION_NOTES.md`. Stabilizing it is a tracked task.
+> The full backend test suite is green (312 tests). Integration tests use Testcontainers PostgreSQL, so Docker must be running.
 
 ## Project Structure
 

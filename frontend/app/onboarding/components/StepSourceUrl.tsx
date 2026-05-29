@@ -306,21 +306,21 @@ export function StepSourceUrl({
               <>
                 <li>Wyszukaj swoją firmę w Google Maps</li>
                 <li>Skopiuj adres URL z paska przeglądarki</li>
-                <li>URL powinien zawierać "/maps/place/"</li>
+                <li>URL powinien zawierać &quot;/maps/place/&quot;</li>
               </>
             )}
             {sourceType === SourceType.FACEBOOK && (
               <>
                 <li>Otwórz stronę firmową na Facebooku</li>
                 <li>Skopiuj adres URL z paska przeglądarki</li>
-                <li>URL powinien zawierać "facebook.com/"</li>
+                <li>URL powinien zawierać &quot;facebook.com/&quot;</li>
               </>
             )}
             {sourceType === SourceType.TRUSTPILOT && (
               <>
                 <li>Wyszukaj swoją firmę na Trustpilot</li>
                 <li>Skopiuj adres URL z paska przeglądarki</li>
-                <li>URL powinien zawierać "/review/"</li>
+                <li>URL powinien zawierać &quot;/review/&quot;</li>
               </>
             )}
           </ul>

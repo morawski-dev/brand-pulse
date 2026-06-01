@@ -1,6 +1,6 @@
 # BrandPulse
 
-> Monitor and analyze customer reviews from multiple sources with AI-powered sentiment analysis.
+> Monitor and analyze customer reviews from multiple sources with AI-powered sentiment analysis
 
 **BrandPulse** is a SaaS web application that helps small and medium-sized service businesses (restaurants, hotels, beauty salons, etc.) aggregate, monitor, and analyze customer reviews from multiple platforms including Google, Facebook, and Trustpilot. The system uses AI to perform sentiment analysis and provides actionable insights through an intuitive dashboard.
 
